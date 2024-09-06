@@ -21,7 +21,7 @@
   "author": "jojobyte <184880+jojobyte@users.noreply.github.com> (https://jojo.io/)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jojobyte/theway.git"
+    "url": "git+https://github.com/jojobyte/theway.git"
   },
   "type": "module",
   "main": "index.js",
