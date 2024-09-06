@@ -1,0 +1,37 @@
+{
+  "name": "theway",
+  "version": "0.0.0",
+  "description": "A tiny (zero dependency) router library for browsers & servers",
+  "keywords": [
+    "backend",
+    "frontend",
+    "browser",
+    "server",
+    "router",
+    "vanilla"
+  ],
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/jojobyte"
+    },
+    "https://ko-fi.com/jojobyte",
+    "https://liberapay.com/jojobyte/"
+  ],
+  "author": "jojobyte <184880+jojobyte@users.noreply.github.com> (https://jojo.io/)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jojobyte/theway.git"
+  },
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
