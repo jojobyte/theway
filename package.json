@@ -1,14 +1,15 @@
 {
   "name": "theway",
   "version": "0.0.0",
-  "description": "A tiny (zero dependency) router library for browsers & servers",
+  "description": "A tiny (zero dependency) router for browsers & servers",
   "keywords": [
     "backend",
     "frontend",
     "browser",
     "server",
     "router",
-    "vanilla"
+    "vanilla",
+    "spa"
   ],
   "funding": [
     {
@@ -25,6 +26,13 @@
   },
   "type": "module",
   "main": "index.js",
+  "files": [
+    "README.md",
+    "patterns.js",
+    "server.js",
+    "utils.js",
+    "index.js"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
