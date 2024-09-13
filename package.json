@@ -1,6 +1,6 @@
 {
   "name": "theway",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A tiny (zero dependency) router for browsers & servers",
   "keywords": [
     "backend",
