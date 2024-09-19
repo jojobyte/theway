@@ -1,0 +1,14 @@
+{
+  "name": "full-stack-vanilla-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npm run http",
+    "http": "npx sirv-cli ../../ -D --single 'examples/full-stack/index.html' -p 4176",
+    "server": "node server.js"
+  },
+  "dependencies": {
+    "theway": "^0.0.1"
+  }
+}
