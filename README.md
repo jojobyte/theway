@@ -105,11 +105,7 @@ app
 
     next('failed to retrieve users data')
   })
-  .use(serveStaticFiles(join(import.meta.dirname, '../'), {
-    readFile,
-    join,
-    extname,
-  }))
+  .use(serveStaticFiles(join(import.meta.dirname, '../')))
 
 httpServer.on('request', app.listen);
 
