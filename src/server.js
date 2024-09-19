@@ -1,39 +1,46 @@
-import { isBrowser } from './utils.js'
+export const serveStaticFiles = async (dir, options = {}) => {
+  // let { entrypoint = null } = options
 
-export const serveStaticFiles = (dir, options) => {
-  let {
-    readFile,
-    join,
-    extname,
-  } = options
+  console.log('setup static file server for', dir)
 
-  if (!isBrowser() && readFile && join && extname) {
+  let { isBrowser } = await import('./utils.js')
+
+  if (!isBrowser()) {
+    const { readFile } = await import('node:fs/promises')
+    const { join, extname } = await import('node:path')
+
     return async (req, res, next) => {
       let { url } = req
       let path = join(dir, url)
 
       if (url === '/' || path.endsWith('/')) {
-        next()
-        return this
+        return next()
       }
 
       if (!path.endsWith('/')) {
-        let file = readFile(path, { encoding: 'utf8' })
-        file.then(fd => {
-          res.send(fd, 200, {
-            'Content-Type': extToMime(extname(path).substring(1))
-          })
+        try {
+          let file = await readFile(path, { encoding: 'utf8' })
 
-          return this
-        })
-        .catch(next)
+          if (file) {
+            res.send(file, 200, {
+              'Content-Type': extensionToMimeType(extname(path).substring(1))
+            })
+            return this;
+          }
+
+          return next()
+        } catch (err) {
+          // console.error(path, err, options)
+
+          return next()
+        }
       }
 
-      next()
+      return next()
     }
   }
 
-  return this
+  return () => {}
 }
 
 export function query(selector) {
@@ -166,30 +173,77 @@ export function entrypoint(initialValue, entryPage) {
   }
 }
 
-export function extToMime(ext) {
-  let mimes = {
-    'htm': 'text/html',
-    'html': 'text/html',
-    'txt': 'text/plain',
-    'md': 'text/markdown',
-    'css': 'text/css',
-    'js': 'text/javascript',
-    'mjs': 'text/javascript',
-    'cjs': 'text/javascript',
-    'json': 'application/json',
-    'zip': 'application/octet-stream',
-    'png': 'image/png',
-    'gif': 'image/gif',
-    'jpeg': 'image/jpeg',
-    'jpg': 'image/jpeg',
-    'svg': 'image/svg+xml',
-    'collection': 'font/collection',
-    'otf': 'font/otf',
-    'sfnt': 'font/sfnt',
-    'ttf': 'font/ttf',
-    'woff': 'font/woff',
-    'woff2': 'font/woff2',
+const EXT_MIME_TYPES = {
+  'htm': 'text/html',
+  'html': 'text/html',
+  'txt': 'text/plain',
+  'md': 'text/markdown',
+  'css': 'text/css',
+  'js': 'text/javascript',
+  'mjs': 'text/javascript',
+  'cjs': 'text/javascript',
+  'json': 'application/json',
+  'zip': 'application/octet-stream',
+  'png': 'image/png',
+  'gif': 'image/gif',
+  'jpeg': 'image/jpeg',
+  'jpg': 'image/jpeg',
+  'svg': 'image/svg+xml',
+  'collection': 'font/collection',
+  'otf': 'font/otf',
+  'sfnt': 'font/sfnt',
+  'ttf': 'font/ttf',
+  'woff': 'font/woff',
+  'woff2': 'font/woff2',
+}
+
+/**
+ * Overly simplified version of file extension to mime type
+ *
+ * @example
+ *   let jsonExt = extensionToMimeType('json')
+ *   // jsonExt === 'application/json'
+ *
+ *   let htmlExt = extensionToMimeType('html')
+ *   // htmlExt === 'text/html'
+ *
+ * @param {string} ext a file extension
+ * @param {Record<string,string>} [mimeTypes=EXT_MIME_TYPES] an object with file extension to mime type pairings
+ *
+ * @returns {string}
+ */
+export function extensionToMimeType(
+  ext,
+  mimeTypes = EXT_MIME_TYPES
+) {
+  return mimeTypes[ext]
+}
+
+/**
+ * Array contains any
+ *
+ * @example
+ *   let contains = containsAny(['a', 'b', 'c'], ['x', 'b'])
+ *   // contains === true
+ *   let contains = containsAny(['a', 'b', 'c'], ['x', 'y', 'z'])
+ *   // contains === false
+ *
+ * @param {string[]} hay Haystack
+ * @param {string[]} needles Needles
+ *
+ * @returns {number} Position where at least one of Needles exist in Haystack
+ */
+export function containsAny(hay, needles) {
+  let found = -1
+
+  for (let needle in needles) {
+    let nay = hay.findIndex(h => h === needles[needle])
+
+    if (nay > -1) {
+      found = parseInt(nay, 10)
+      break
+    }
   }
 
-  return mimes[ext]
+  return found
 }

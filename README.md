@@ -63,7 +63,7 @@ import createApp from './app.js'
 
 import {
   entrypoint,
-  extToMime,
+  extensionToMimeType,
   serveStaticFiles,
 } from 'theway/server.js'
 
@@ -79,19 +79,31 @@ const app = createApp(
 )
 
 app
-  .get("/api/names", async ({params}, res, next) => {
-    let req = await fetch(
-      `https://api.example.com/names`
-    )
-    let names = await req.text()
+  .get("/api/users", async ({params}, res, next) => {
+    try {
+      let req = await fetch(
+        'https://dummyjson.com/users?limit=3&select=firstName,age',
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
 
-    if (names) {
-      console.log('router get /api/names', params, names)
+      if (req.ok) {
+        let users = await req.text()
 
-      return res.json(names)
+        if (users) {
+          console.log('router get /api/users', params, users)
+
+          return res.json(users)
+        }
+      }
+    } catch (err) {
+      next(err)
     }
 
-    next('failed to retrieve names data')
+    next('failed to retrieve users data')
   })
   .use(serveStaticFiles(join(import.meta.dirname, '../'), {
     readFile,

@@ -2,6 +2,7 @@
   "name": "theway",
   "version": "0.0.1",
   "description": "A tiny (zero dependency) router for browsers & servers",
+  "author": "jojobyte <184880+jojobyte@users.noreply.github.com> (https://jojo.io/)",
   "keywords": [
     "backend",
     "frontend",
@@ -19,19 +20,19 @@
     "https://ko-fi.com/jojobyte",
     "https://liberapay.com/jojobyte/"
   ],
-  "author": "jojobyte <184880+jojobyte@users.noreply.github.com> (https://jojo.io/)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jojobyte/theway.git"
   },
   "type": "module",
-  "main": "index.js",
+  "main": "src/index.js",
+  "bin": {
+    "theway": "bin/theway.js"
+  },
   "files": [
-    "README.md",
-    "patterns.js",
-    "server.js",
-    "utils.js",
-    "index.js"
+    "bin/",
+    "src/",
+    "README.md"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

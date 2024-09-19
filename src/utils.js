@@ -10,6 +10,11 @@ export const ROUTER_TYPE = {
   REQ
 }
 
+/**
+ * Detects if `window` & `document` are not undefined.
+ *
+ * @returns {boolean}
+ */
 export function isBrowser() {
   return ![
     typeof window,
@@ -17,8 +22,8 @@ export function isBrowser() {
   ].includes('undefined')
 }
 
-export const importedRoutes = createSignal({})
-export const lastRoute = createSignal('')
+const importedRoutes = createSignal({})
+const lastRoute = createSignal('')
 
 /**
  * Creates a reactive signal
@@ -55,15 +60,6 @@ export function createSignal(initialValue) {
   function on(s) {
     const i = subs.push(s)-1;
     return () => { subs[i] = 0; };
-  }
-
-  function once(s) {
-    const i = subs.length
-
-    subs.push((_value, _last) => {
-      s && s(_value, _last);
-      subs[i] = 0;
-    });
   }
 
   return {
@@ -141,8 +137,8 @@ export const next = (resolve, reject) => (err) => {
 }
 
 export const settler = (
-  callback, req, res
-) => new Promise((resolve, reject) => {
+  callback, req, res, next,
+) => new Promise(async (resolve, reject) => {
   res.send = (...args) => {
     if (!isBrowser()) {
       let [
@@ -174,17 +170,21 @@ export const settler = (
   res.resolve = resolve
   res.reject = reject
 
-  return callback(
+  return callback?.(
     req,
     res,
-    next(resolve, reject),
+    resolve,
   )
 })
 
-export async function settled(route, req, res) {
+export async function settled(route, req, res, next) {
+  let all = []
+
   for (let f = 0; f < route.fns.length; f++) {
-    await settler(route.fns[f], req, res)
+    all.push(await settler(route.fns[f], req, res, next))
   }
+
+  return all
 }
 
 export const handleClick = ({ base, RTE, route }) => (event) => {

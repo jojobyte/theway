@@ -23,21 +23,28 @@ function Way(
   config = {},
 ) {
   let {
+    entrypoint = null,
     handleErrors = (req, res, next, ...args) => {
+      let err404 = `404 Not Found`
+
+      console.error('routing error', req.url, err404, ...args)
+
       if (!isBrowser()) {
         res.writeHead?.(404, { 'Content-Type': 'text/html' });
-        res.end?.(
-          '<h1>404 Not Found</h1>'
-        );
+        res.end?.(`<h1>${err404}</h1>`);
         return;
+      } else {
+        if (config.entrypoint) {
+          config.entrypoint.innerHTML = `<h1>${err404}</h1>`
+        }
+        return next(err404)
       }
-      console.error('routing error', ...args)
     },
     serveStaticFiles = () => {
       let msg = `try importing serveStaticFiles from 'theway/server.js'`
       console.warn(msg)
       return async (req, res, next) => !res?.finished && (res?.end?.(msg) || next())
-    }
+    },
   } = config
   const RTE = routeRegex(base)
 
@@ -53,14 +60,20 @@ function Way(
     type = ROUTER_TYPE.REQ
   }
 
+  this.set = (key, value) => {
+    config[key] = value
+    return this
+  }
+
   this.navigate = async (
     req = {},
     res = function() {},
+    next = function() {},
   ) => {
     let {
       method = 'GET',
       url = type !== ROUTER_TYPE.REQ ? location?.pathname + (
-        type === ROUTER_TYPE.HASH ? location?.hash || base + '/' : ''
+        type === ROUTER_TYPE.HASH ? (location?.hash || base) + '/' : ''
       ) : '',
     } = req
 
@@ -88,9 +101,11 @@ function Way(
         if (
           !param && !route.method && route.fns?.length > 0
         ) {
-          await settled(route, req, res)
+          let allSettled = await settled(route, req, res, next)
 
-          return this;
+          if (allSettled.find(s => !!s)) {
+            return this
+          }
         }
 
         if (
@@ -100,13 +115,13 @@ function Way(
             params[route.keys[p]] = param[++p] || null;
           }
 
-          await settled(route, req, res)
+          req.params = params
+
+          await settled(route, req, res, next)
 
           found++;
         }
       }
-
-      req.params = params
 
       if (found > 0) {
         return this;
@@ -146,7 +161,10 @@ function Way(
     let method, path, fns
     let pathRegex = {}
 
-    if (typeof args[0] === 'function') {
+    if (
+      typeof args[0] === 'function' ||
+      args[0] instanceof Promise
+    ) {
       fns = [...args]
       pathRegex.fns = fns;
       routes.push(pathRegex);
