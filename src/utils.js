@@ -26,6 +26,30 @@ const importedRoutes = createSignal({})
 const lastRoute = createSignal('')
 
 /**
+ * Code Highlighting for String Literals.
+ *
+ * {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#raw_strings MDN Reference}
+ *
+ * @example
+ *    import { lit as html, lit as css } from './utils.js'
+ *    let h = html`<div><span>${example}</span></div>`
+ *    let c = css`div > span { color: #bad; }`
+ *
+ *    // falsy values now default to empty string
+ *    let i = html`<div>${doesNotExist && html`<img src="a.png">`}</div>`
+
+ *    // i === '<div></div>'
+ *    // instead of
+ *    // i === '<div>undefined</div>'
+ *
+ * @param {TemplateStringsArray} s
+ * @param  {...any} v
+ *
+ * @returns {string}
+ */
+export const lit = (s, ...v) => String.raw({ raw: s }, ...(v.map(x => x || '')))
+
+/**
  * Creates a reactive signal
  *
  * Inspired By
@@ -79,54 +103,64 @@ export function createSignal(initialValue) {
  * Import a JS file that handles a route
  *
  * @example
- *    const app = document.querySelector('#app')
- *    let route = loadRoute('/dir/thing.js', app)
+ *    let route = loadRoute('/dir/thing.js')
  *
  * @param {string} route The filename of the route to load excluding the extension & directory
- * @param {Element} app The element to render content to
 */
-export const loadRoute = (
+// * @param {Element} app The element to render content to
+// * @param {object} way Instance of `theway`
+export function loadRoute(
   route,
-  app,
-) => async (req, res, next) => {
-  let loaded
-  if (
-    lastRoute.value !== route &&
-    importedRoutes.value?.[lastRoute.value]?.unload
-  ) {
-    let unloadedRoute = await importedRoutes.value[lastRoute.value].unload?.()
-    // console.log('unloadedRoute', lastRoute.value, unloadedRoute)
-  }
-
-  // console.log("loadRoute", {route, url: req.url});
-
-  if (
-    !importedRoutes.value?.[route]?.load
-  ) {
+  // way,
+  // app,
+) {
+  return async function (req, res, next) {
+    let loaded
     if (
-      !importedRoutes.value?.[route]?._def
+      lastRoute.value !== route &&
+      importedRoutes.value?.[lastRoute.value]?.unload
     ) {
-      let importRoute = await import(route)
-      importedRoutes.value[route] = {
-        _def: importRoute.default,
-        ...(await importRoute.default(app, req, res, next) || {})
+      let unloadedRoute = await importedRoutes.value[lastRoute.value].unload?.()
+      // let unloadedRoute = await importedRoutes.value[lastRoute.value].unload?.call(way)
+      // console.log('unloadedRoute', lastRoute.value, unloadedRoute)
+    }
+
+    console.log("loadRoute", {route, url: req.url, that: this});
+
+    if (
+      !importedRoutes.value?.[route]?.load
+    ) {
+      if (
+        !importedRoutes.value?.[route]?._def
+      ) {
+        let importRoute = await import(route)
+        importedRoutes.value[route] = {
+          _def: importRoute.default,
+          // ...(await importRoute.default(this.get('entrypoint'), req, res, next) || {})
+          ...(await importRoute.default.call(
+            this, this.get('entrypoint'), req, res, next
+          ) || {})
+        }
+      } else {
+        // loaded = await importedRoutes.value[route]._def(this.get('entrypoint'), req, res, next)
+        loaded = await importedRoutes.value[route]._def.call(
+          this, this.get('entrypoint'), req, res, next
+        )
       }
     } else {
-      loaded = await importedRoutes.value[route]._def(app, req, res, next)
-    }
-  } else {
-    let renderRoute = await importedRoutes.value[route].load?.(req, res, next)
-    if (renderRoute) {
-      importedRoutes.value[route] = {
-        ...importedRoutes.value[route],
-        unload: renderRoute
+      let renderRoute = await importedRoutes.value[route].load?.(req, res, next)
+      if (renderRoute) {
+        importedRoutes.value[route] = {
+          ...importedRoutes.value[route],
+          unload: renderRoute
+        }
       }
     }
+
+    lastRoute.value = route
+
+    return importedRoutes.value[route]
   }
-
-  lastRoute.value = route
-
-  return importedRoutes.value[route]
 }
 
 export const next = (resolve, reject) => (err) => {
@@ -136,52 +170,57 @@ export const next = (resolve, reject) => (err) => {
   return resolve()
 }
 
-export const settler = (
+export function settler(
   callback, req, res, next,
-) => new Promise(async (resolve, reject) => {
-  res.send = (...args) => {
-    if (!isBrowser()) {
-      let [
-        body = '',
-        status = 200,
-        headers = { 'Content-Type': 'text/html' },
-      ] = args
+) {
+  return new Promise(async (resolve, reject) => {
+    res.send = (...args) => {
+      if (!isBrowser()) {
+        let [
+          body = '',
+          status = 200,
+          headers = { 'Content-Type': 'text/html' },
+        ] = args
 
-      res.writeHead?.(status, headers);
-      res.end?.(body);
+        res.writeHead?.(status, headers);
+        res.end?.(body);
+      }
+
+      return resolve(...args)
     }
+    res.json = (...args) => {
+      if (!isBrowser()) {
+        let [
+          body = '',
+          status = 200,
+          headers = { 'Content-Type': 'application/json' },
+        ] = args
 
-    return resolve(...args)
-  }
-  res.json = (...args) => {
-    if (!isBrowser()) {
-      let [
-        body = '',
-        status = 200,
-        headers = { 'Content-Type': 'application/json' },
-      ] = args
+        res.writeHead?.(status, headers);
+        res.end?.(body);
+      }
 
-      res.writeHead?.(status, headers);
-      res.end?.(body);
+      return resolve(...args)
     }
+    res.resolve = resolve
+    res.reject = reject
 
-    return resolve(...args)
-  }
-  res.resolve = resolve
-  res.reject = reject
-
-  return callback?.(
-    req,
-    res,
-    resolve,
-  )
-})
+    return callback?.call(
+      this,
+      req,
+      res,
+      resolve,
+    )
+  })
+}
 
 export async function settled(route, req, res, next) {
   let all = []
 
   for (let f = 0; f < route.fns.length; f++) {
-    all.push(await settler(route.fns[f], req, res, next))
+    all.push(
+      await settler.call(this, route.fns[f], req, res, next)
+    )
   }
 
   return all

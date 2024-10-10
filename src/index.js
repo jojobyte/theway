@@ -5,6 +5,7 @@ import {
   isBrowser,
   settled,
   handleClick,
+  lit,
 } from './utils.js'
 
 import {
@@ -23,6 +24,7 @@ function Way(
   config = {},
 ) {
   let {
+    layout = null,
     entrypoint = null,
     handleErrors = (req, res, next, ...args) => {
       let err404 = `404 Not Found`
@@ -41,7 +43,7 @@ function Way(
       }
     },
     serveStaticFiles = () => {
-      let msg = `try importing serveStaticFiles from 'theway/server.js'`
+      let msg = `try \`importing serveStaticFiles from 'theway/server.js'\``
       console.warn(msg)
       return async (req, res, next) => !res?.finished && (res?.end?.(msg) || next())
     },
@@ -58,11 +60,6 @@ function Way(
 
   if (!isBrowser()) {
     type = ROUTER_TYPE.REQ
-  }
-
-  this.set = (key, value) => {
-    config[key] = value
-    return this
   }
 
   this.navigate = async (
@@ -101,7 +98,8 @@ function Way(
         if (
           !param && !route.method && route.fns?.length > 0
         ) {
-          let allSettled = await settled(route, req, res, next)
+          // let allSettled = await settled(route, req, res, next)
+          let allSettled = await settled.call(this, route, req, res, next)
 
           if (allSettled.find(s => !!s)) {
             return this
@@ -117,7 +115,8 @@ function Way(
 
           req.params = params
 
-          await settled(route, req, res, next)
+          // await settled(route, req, res, next)
+          await settled.call(this, route, req, res, next)
 
           found++;
         }
@@ -188,8 +187,34 @@ function Way(
 
   for (let method of HTTP_METHODS) {
     this[method] = (...args) => {
+      if (
+        method === 'get' &&
+        args.length === 1 &&
+        typeof args[0] === 'string'
+      ) {
+        return config[args[0]]
+      }
+
       return this.use(method.toUpperCase(), ...args)
     }
+  }
+
+  this.set = (key, value) => {
+    config[key] = value
+    return this
+  }
+
+  this.config = config
+
+  /** @type {lit} */
+  this.useLayout = (...args) => {
+    if (
+      typeof config.layout === 'function'
+    ) {
+      return config.layout?.apply(this, args)
+    }
+
+    return lit.apply(this, args)
   }
 
   const rerouteUnsub = () => this.reroute.on(req => {
