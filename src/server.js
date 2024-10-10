@@ -225,6 +225,7 @@ export function extensionToMimeType(
  * @example
  *   let contains = containsAny(['a', 'b', 'c'], ['x', 'b'])
  *   // contains === true
+ *
  *   let contains = containsAny(['a', 'b', 'c'], ['x', 'y', 'z'])
  *   // contains === false
  *
