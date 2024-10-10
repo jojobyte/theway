@@ -20,9 +20,11 @@ export const generatePattern = (path, loose) => {
             e = val.indexOf('.', 1),
             patterns = {
               dir: v => '/' + v,
-              wild: () => '/(.*)',
               param: v => '/([^/]+?)' + (
                 !!~e ? '\\' + v.substring(e) : ''
+              ),
+              wild: () => '(?:/([^/].*))?' + (
+                !!~e ? '?\\' + v.substring(e) : ''
               ),
               opt: v => '(?:/([^/]+?))?' + (
                 !!~e ? '?\\' + v.substring(e) : ''
