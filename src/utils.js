@@ -106,26 +106,25 @@ export function createSignal(initialValue) {
  *    let route = loadRoute('/dir/thing.js')
  *
  * @param {string} route The filename of the route to load excluding the extension & directory
+ * @param {string} alias an alias to be applied to the route
 */
-// * @param {Element} app The element to render content to
-// * @param {object} way Instance of `theway`
 export function loadRoute(
   route,
-  // way,
-  // app,
+  alias,
 ) {
   return async function (req, res, next) {
+    if (alias) {
+      req.alias = alias
+    }
+
     let loaded
     if (
       lastRoute.value !== route &&
       importedRoutes.value?.[lastRoute.value]?.unload
     ) {
-      let unloadedRoute = await importedRoutes.value[lastRoute.value].unload?.()
-      // let unloadedRoute = await importedRoutes.value[lastRoute.value].unload?.call(way)
+      let unloadedRoute = await importedRoutes.value[lastRoute.value].unload?.call(this)
       // console.log('unloadedRoute', lastRoute.value, unloadedRoute)
     }
-
-    console.log("loadRoute", {route, url: req.url, that: this});
 
     if (
       !importedRoutes.value?.[route]?.load
@@ -136,15 +135,13 @@ export function loadRoute(
         let importRoute = await import(route)
         importedRoutes.value[route] = {
           _def: importRoute.default,
-          // ...(await importRoute.default(this.get('entrypoint'), req, res, next) || {})
           ...(await importRoute.default.call(
-            this, this.get('entrypoint'), req, res, next
+            this, req, res, next
           ) || {})
         }
       } else {
-        // loaded = await importedRoutes.value[route]._def(this.get('entrypoint'), req, res, next)
         loaded = await importedRoutes.value[route]._def.call(
-          this, this.get('entrypoint'), req, res, next
+          this, req, res, next
         )
       }
     } else {
@@ -238,10 +235,34 @@ export const handleClick = ({ base, RTE, route }) => (event) => {
     return;
   }
 
-  // console.log('router click', { event, anchor, href })
-
   if (href[0] !== base || RTE.test(href)) {
     event.preventDefault();
     route(href);
   }
+}
+
+export function activateCurrentNavLink(
+  alias,
+  config = {},
+) {
+  if (isBrowser()) {
+    config.targ = config.targ || document
+  }
+
+  let {
+    activeClass = 'active',
+    navSelector = 'aside nav a.active',
+    currentNavSelector = `[data-alias=${alias}]`,
+    targ
+  } = config
+
+  if (!targ) {
+    return;
+  }
+
+  let activeNavLinks = targ.querySelectorAll(navSelector)
+  let currentRouteLink = targ.querySelector(currentNavSelector)
+
+  activeNavLinks.forEach(a => a?.classList?.remove?.(activeClass))
+  currentRouteLink?.classList?.add?.(activeClass)
 }

@@ -114,61 +114,112 @@ export function query(selector) {
   return new RegExp(`${start}(?<query>${catchAll})${end}`,'igm')
 }
 
-export function entrypoint(initialValue, entryPage) {
+export function DOMFaker(initialValue, htmlString) {
   let _value = {
     innerHTML: initialValue,
   };
   let _last = {};
+  let [openTag, closeTag] = initialValue.split(/><\//g)
+  let tagWithVal = v => openTag && closeTag ? `${openTag}>${v}</${closeTag}` : v
 
   return {
-    entryPage,
+    htmlString,
     get innerHTML() { return _value['innerHTML']; },
     set innerHTML(v) {
       _last['innerHTML'] = _value['innerHTML']
-      _value['innerHTML'] = `<main id="app">${v}</main>`;
+      _value['innerHTML'] = tagWithVal(v)
 
-      entryPage.replace(
+      htmlString = htmlString.replace(
         _last['innerHTML'],
         _value['innerHTML'],
       )
+
+      return htmlString
     },
     get style() { return _value['style']; },
     set style(v) {
       _last['style'] = _value['style']
-      _value['style'] = `<main id="app">${v}</main>`;
+      _value['style'] = tagWithVal(v)
 
-      entryPage.replace(
+      htmlString = htmlString.replace(
         _last['style'],
         _value['style'],
       )
+
+      return htmlString
     },
     get value() { return _value['value']; },
     set value(v) {
       _last['value'] = _value['value']
-      _value['value'] = `<main id="app">${v}</main>`;
+      _value['value'] = tagWithVal(v)
 
-      entryPage.replace(
+      htmlString = htmlString.replace(
         _last['value'],
         _value['value'],
       )
+
+      return htmlString
     },
     querySelector: (selector) => {
       let selRegex = query(selector)
-      let selRes = selRegex.exec(_value)
-      return entrypoint(selRes?.groups?.query || '')
+      let selRes = selRegex.exec(_value.innerHTML)
+
+      return DOMFaker(selRes?.groups?.query || '', htmlString)
     },
     querySelectorAll: (selector) => {
       let selRegex = query(selector)
-      return [..._value.matchAll(selRegex)].map(
-        p => entrypoint(p?.groups?.query || '')
+
+      return [..._value.innerHTML.matchAll(selRegex)].map(
+        p => DOMFaker(p?.groups?.query || '', htmlString)
       )
     },
     addEventListener: console.log,
     removeEventListener: console.log,
-    classList: function() {
-      this.add = () => {}
-      this.toggle = () => {}
-      this.remove = () => {}
+    get classList() {
+      let values = []
+      let value = values.join(' ')
+
+      Object.defineProperties(this, {
+        value: {
+          enumerable: true,
+          get() { return value; },
+          set(v) {
+            value = v
+            values = value.split(' ')
+          },
+        },
+        values: {
+          enumerable: true,
+          get() { return values; },
+          set(v) {
+            values = [...v]
+            value = values.join(' ')
+          },
+        },
+        add(v) {
+          this.values.push(v)
+          this.value = this.values.join(' ')
+        },
+        toggle(v) {
+          let t = this.value.indexOf(v)
+
+          if (t > -1) {
+            this.values.splice(t, 1)
+            this.value = this.values.join(' ')
+          } else {
+            this.values.push(v)
+            this.value = this.values.join(' ')
+          }
+        },
+        remove(v) {
+          let t = this.value.indexOf(v)
+
+          if (t > -1) {
+            this.values.splice(t, 1)
+            this.value = this.values.join(' ')
+          }
+        },
+      })
     },
   }
 }

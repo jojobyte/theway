@@ -8,9 +8,9 @@ export const routeRegex = base => new RegExp(
   'i'
 )
 
-export const generatePattern = (path, loose) => {
+export const patternToRegex = (path, loose) => {
   let keys = [],
-      pattern = [
+      regex = [
         ...path.matchAll(pathRegex)
       ].map(c => {
         let [
@@ -38,7 +38,7 @@ export const generatePattern = (path, loose) => {
         return patterns[key](val)
       }).join('')
 
-  pattern = new RegExp(`^${pattern || '/'}${loose ? '(?=$|\/)' : '\/?$'}`, 'i')
+  regex = new RegExp(`^${regex || '/'}${loose ? '(?=$|\/)' : '\/?$'}`, 'i')
 
-  return { keys, pattern };
+  return { keys, regex };
 }

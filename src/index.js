@@ -5,12 +5,13 @@ import {
   isBrowser,
   settled,
   handleClick,
+  activateCurrentNavLink,
   lit,
 } from './utils.js'
 
 import {
   routeRegex,
-  generatePattern,
+  patternToRegex,
 } from './patterns.js'
 
 /**
@@ -92,13 +93,18 @@ function Way(
         params = {}, found = 0;
 
       for (currentRoute = url; i < routes.length; i++) {
+        if (req.alias) {
+          routes[i].alias = req.alias
+        }
         route = routes[i]
-        param = route.pattern?.exec?.(url)
+        param = route.regex?.exec?.(url)
+
+        req.route = route
+        req.pattern = route.pattern
 
         if (
           !param && !route.method && route.fns?.length > 0
         ) {
-          // let allSettled = await settled(route, req, res, next)
           let allSettled = await settled.call(this, route, req, res, next)
 
           if (allSettled.find(s => !!s)) {
@@ -115,7 +121,6 @@ function Way(
 
           req.params = params
 
-          // await settled(route, req, res, next)
           await settled.call(this, route, req, res, next)
 
           found++;
@@ -139,20 +144,32 @@ function Way(
     })
   }
 
-  this.route = (url) => {
-    let req = {
-      state: history.state,
-      url,
+  this.route = (req, res, next) => {
+    let request = {}
+    if (typeof req === 'string') {
+      request = {
+        url: req,
+      }
+    } else {
+      request = {
+        ...req,
+      }
+    }
+
+    if (type !== ROUTER_TYPE.REQ) {
+      request.state = history.state
     }
 
     if (this.reroute) {
-      this.reroute.value = req
+      this.reroute.value = request
     } else {
-      this.navigate(req)
+      this.navigate(request, res, next)
     }
   }
 
   this.click = handleClick({ base, RTE, route: this.route })
+
+  this.activateCurrentNavLink = activateCurrentNavLink
 
   this.static = serveStaticFiles
 
@@ -177,9 +194,10 @@ function Way(
     path = args.shift()
     fns = [...args]
 
-    pathRegex = generatePattern(path)
+    pathRegex = patternToRegex(path)
     pathRegex.fns = fns;
     pathRegex.method = method;
+    pathRegex.pattern = path;
 
     routes.push(pathRegex);
     return this;
@@ -195,26 +213,13 @@ function Way(
         return config[args[0]]
       }
 
-      return this.use(method.toUpperCase(), ...args)
+      return this.use.call(this, method.toUpperCase(), ...args)
     }
   }
 
   this.set = (key, value) => {
     config[key] = value
     return this
-  }
-
-  this.config = config
-
-  /** @type {lit} */
-  this.useLayout = (...args) => {
-    if (
-      typeof config.layout === 'function'
-    ) {
-      return config.layout?.apply(this, args)
-    }
-
-    return lit.apply(this, args)
   }
 
   const rerouteUnsub = () => this.reroute.on(req => {
@@ -225,23 +230,60 @@ function Way(
     this.navigate(req)
   })
 
-  this.listen = (...args) => {
-    if (type !== ROUTER_TYPE.REQ) {
-      addEventListener(type, this.navigate);
-      addEventListener('click', this.click);
-      rerouteOff = rerouteUnsub()
-    }
+  Object.defineProperties(this, {
+    config: {
+      enumerable: true,
+      get() { return config; },
+      set(v) {
+        config = v
+      },
+    },
+    entrypoint: {
+      enumerable: true,
+      get() { return config.entrypoint; },
+      set(v) {
+        config.entrypoint = v
+      },
+    },
+    /** @type {lit} */
+    useLayout: {
+      get() {
+        return (...args) => {
+          if (
+            typeof config.layout === 'function'
+          ) {
+            return config.layout?.apply(this, args)
+          }
 
-    this.navigate(...args);
-  }
+          return lit.apply(this, args)
+        }
+      },
+    },
+    listen: {
+      get() {
+        return (...args) => {
+          if (type !== ROUTER_TYPE.REQ) {
+            addEventListener(type, this.navigate);
+            addEventListener('click', this.click);
+            rerouteOff = rerouteUnsub()
+          }
 
-  this.unlisten = (...args) => {
-    if (type !== ROUTER_TYPE.REQ) {
-      removeEventListener(type, this.navigate);
-      removeEventListener('click', this.click);
-      rerouteOff?.()
-    }
-  }
+          this.route(...args);
+        }
+      },
+    },
+    unlisten: {
+      get() {
+        return (...args) => {
+          if (type !== ROUTER_TYPE.REQ) {
+            removeEventListener(type, this.navigate);
+            removeEventListener('click', this.click);
+            rerouteOff?.()
+          }
+        }
+      },
+    },
+  });
 }
 
 export default Way
