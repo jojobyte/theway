@@ -9,20 +9,39 @@ import {
   loadRoute,
 } from '../../src/utils.js'
 
-import { routePath } from './utils.js'
+import { routePath, isBrowser } from './utils.js'
+import BaseLayout from './layouts/index.js'
 
 const router = new Way('/');
 
 export const createApp = (entrypoint, routeBase) => router
   .set('entrypoint', entrypoint)
-  .use("/", loadRoute(routePath('home', routeBase), entrypoint))
+  .set('layout', BaseLayout)
+  .use(
+    (req, res, next) => {
+      let layout = router.get('layout')
+      const { useLayout, entrypoint: app } = router
+
+      if (layout && app.id === 'app') {
+        app.innerHTML = useLayout()
+      }
+
+      if (isBrowser() && layout && app.id !== 'entrypoint') {
+        const ep = app.querySelector('#entrypoint')
+        router.set('entrypoint', ep)
+      }
+
+      next()
+    }
+  )
+  .use("/", loadRoute(routePath('home', routeBase), 'home'))
   .use(
     "/about",
-    loadRoute(routePath('about', routeBase), entrypoint),
+    loadRoute(routePath('about', routeBase), 'about'),
   )
   .use(
-    "/thing/*?",
-    loadRoute(routePath('thing', routeBase), entrypoint),
+    "/tasks/*?",
+    loadRoute(routePath('tasks', routeBase), 'tasks'),
   )
 
 export default createApp

@@ -3,8 +3,21 @@ import { setupCounter } from '../components/counter.js'
 import { setupLazy } from '../components/lazy.js'
 import { setupBar } from '../components/bar.js'
 
-async function createRoute(app, req, res, next) {
-  console.log("createRoute home", [!!app, req.url, res?.finished]);
+/**
+ * A Complex route example that loads components on initial
+ * load and as a lazy load after a button is clicked, and
+ * provides load & unload callbacks which can be used to
+ * add/remove event listeners and the like
+ *
+ * @param {Request} req Request Data
+ * @param {Response} res Response Data
+ * @param {CallableFunction} next Advance to next route pattern
+ */
+async function createRoute(req, res, next) {
+  const { entrypoint: app, activateCurrentNavLink } = this
+  const alias = this.reroute?.value?.alias || ''
+
+  console.log("createRoute home", [this, app, req.url, res?.finished]);
 
   function render() {
     app.innerHTML = html`
@@ -21,6 +34,8 @@ async function createRoute(app, req, res, next) {
         </div>
       </div>
     `
+
+    activateCurrentNavLink(alias)
   }
 
   async function loadBrowser(req, res, next) {
@@ -55,13 +70,12 @@ async function createRoute(app, req, res, next) {
   }
 
   async function loadServer(req, res, next) {
-    let { entryPage } = app
-    let op = entryPage.replace(
+    let op = app.htmlString.replace(
       `<main id="app"></main>`,
       app.innerHTML,
     )
 
-    console.log('createRoute home loadServer', app.innerHTML?.length, op?.length)
+    console.log('createRoute home loadServer', app.innerHTML?.length, op?.length, res.send)
 
     res.send?.(op);
   }

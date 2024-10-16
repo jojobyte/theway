@@ -9,6 +9,6 @@
     "server": "node server.js"
   },
   "dependencies": {
-    "theway": "^0.0.1"
+    "theway": "^0.0.2"
   }
 }

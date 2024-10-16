@@ -22,6 +22,7 @@ a {
   color: var(--link);
   text-decoration: inherit;
 }
+a.active,
 a:hover {
   color: var(--link);
   text-decoration: underline;
@@ -41,6 +42,12 @@ h1 {
   line-height: 1.1;
 }
 
+h2 {
+  font-size: 2em;
+  line-height: 1.1;
+  margin: 0;
+}
+
 nav {
   display: flex;
   font-size: 2rem;
@@ -48,6 +55,7 @@ nav {
   height: 4rem;
   gap: 1rem;
   align-items: center;
+  justify-content: space-evenly;
 }
 
 fieldset {
@@ -95,7 +103,7 @@ fieldset button {
 }
 
 #app {
-  max-width: 1280px;
+  width: 640px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
@@ -139,6 +147,17 @@ fieldset button {
 #line {
   height: 1px;
   background-color: turquoise;
+}
+
+main > header > h1 {
+  margin: 0;
+}
+main > header > h1 a {
+  color: #ddd;
+}
+main > header > h1 a:hover {
+  color: #fff;
+  text-decoration: none;
 }
 
 

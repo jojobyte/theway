@@ -2,11 +2,10 @@
 
 A tiny (zero dependency) isomorphic router for browsers & servers.
 
-Originally forked from [NavAid](https://github.com/lukeed/navaid), but with some significant changes...
-
 - History & Hash based routing for browser
-- support express style routing (req,res,next) & middleware
-- static file server
+- Server-side (express style) routing (req,res,next) & middleware
+- Simple Static file server
+- Support for layouts
 
 ### Install
 ```sh
@@ -24,18 +23,18 @@ import {
 const router = new Way('/');
 
 export const createApp = (entrypoint, routeBase) => router
-  .use("/", loadRoute('/path/to/route/home.js', entrypoint))
+  .use("/", loadRoute('/path/to/route/home.js', 'home'))
   .use(
     "/about",
-    loadRoute('/path/to/route/about.js', entrypoint),
+    loadRoute('/path/to/route/about.js', 'about'),
   )
   .use(
     "/thing/*?",
-    loadRoute('/path/to/route/thing.js', entrypoint),
+    loadRoute('/path/to/route/thing.js', 'thing'),
   )
   .use(
     "/compare/:crypto?/:fiat?",
-    loadRoute('/path/to/route/compare.js', entrypoint),
+    loadRoute('/path/to/route/compare.js', 'compare'),
   )
 
 export default createApp
@@ -62,14 +61,15 @@ import { join, extname } from 'node:path'
 import createApp from './app.js'
 
 import {
-  entrypoint,
-  extensionToMimeType,
+  DOMFaker,
   serveStaticFiles,
-} from 'theway/server.js'
+} from '../../src/server.js'
 
+const BASE = /<base href="([\s\S]+?)" \/>/ig
 const routeBase = import.meta?.dirname + '/routes/'
-const entryPage = readFileSync('./index.html', 'utf8');
-const fakeDOM = entrypoint(`<main id="app"></main>`, entryPage)
+const theWaySrcDir = join(import.meta.dirname, '../../')
+const entryPage = readFileSync('./index.html', 'utf8').replace(BASE, '')
+const fakeDOM = DOMFaker(`<main id="app"></main>`, entryPage)
 
 const httpServer = http.createServer();
 
@@ -113,3 +113,6 @@ httpServer.listen(8080, () => {
   console.log('Listening on http://127.0.0.1:8080');
 });
 ```
+---
+### Special Thanks
+Originally forked from [NavAid](https://github.com/lukeed/navaid), but with significant changes.

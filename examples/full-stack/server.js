@@ -1,4 +1,3 @@
-
 import http from 'node:http'
 import { readFileSync } from 'node:fs'
 const { join } = await import('node:path')
@@ -6,17 +5,20 @@ const { join } = await import('node:path')
 import createApp from './app.js'
 
 // import {
-//   entrypoint,
+//   DOMFaker,
 //   serveStaticFiles,
 // } from 'theway/server.js'
 import {
-  entrypoint,
+  DOMFaker,
   serveStaticFiles,
 } from '../../src/server.js'
 
+const BASE = /<base href="([\s\S]+?)" \/>/ig
 const routeBase = import.meta?.dirname + '/routes/'
-const entryPage = readFileSync('./index.html', 'utf8');
-const fakeDOM = entrypoint(`<main id="app"></main>`, entryPage)
+const theWaySrcDir = join(import.meta.dirname, '../../')
+let entryPage = readFileSync('./index.html', 'utf8')
+entryPage = entryPage.replace(BASE, '')
+const fakeDOM = DOMFaker(`<main id="app"></main>`, entryPage)
 
 const httpServer = http.createServer();
 
@@ -24,8 +26,6 @@ const app = createApp(
   fakeDOM,
   routeBase,
 )
-
-const theWaySrcDir = join(import.meta.dirname, '../../')
 
 app
   .get("/api/users", async ({params}, res, next) => {
