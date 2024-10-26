@@ -16,17 +16,19 @@ const router = new Way('/');
 
 export const createApp = (entrypoint, routeBase) => router
   .set('entrypoint', entrypoint)
-  .set('layout', BaseLayout)
+  .set('layout', 'BaseLayout')
+  .set('layouts', { BaseLayout })
   .use(
     (req, res, next) => {
       let layout = router.get('layout')
+
       const { useLayout, entrypoint: app } = router
 
-      if (layout && app.id === 'app') {
-        app.innerHTML = useLayout()
+      if (app.id === 'app') {
+        app.innerHTML = useLayout(layout)
       }
 
-      if (isBrowser() && layout && app.id !== 'entrypoint') {
+      if (isBrowser() && app.id !== 'entrypoint') {
         const ep = app.querySelector('#entrypoint')
         router.set('entrypoint', ep)
       }

@@ -63,7 +63,7 @@ import createApp from './app.js'
 import {
   DOMFaker,
   serveStaticFiles,
-} from '../../src/server.js'
+} from 'theway/server.js'
 
 const BASE = /<base href="([\s\S]+?)" \/>/ig
 const routeBase = import.meta?.dirname + '/routes/'
@@ -113,6 +113,8 @@ httpServer.listen(8080, () => {
   console.log('Listening on http://127.0.0.1:8080');
 });
 ```
+
+
 ---
 ### Special Thanks
 Originally forked from [NavAid](https://github.com/lukeed/navaid), but with significant changes.
