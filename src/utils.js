@@ -63,7 +63,7 @@ export const lit = (s, ...v) => String.raw({ raw: s }, ...(v.map(x => x || '')))
  *    console.log(count.value) // 2
  *
  *    let off = count.on((value) => {
- *      document.querySelector("body").innerHTML = value;
+ *      document.querySelector('body').innerHTML = value;
  *    });
  *
  *    off();
@@ -167,6 +167,14 @@ export const next = (resolve, reject) => (err) => {
   return resolve()
 }
 
+export function prefixPath(Location) {
+  if (!Location.startsWith('/')) {
+    return '/' + Location
+  }
+
+  return Location
+}
+
 export function settler(
   callback, req, res, next,
 ) {
@@ -179,8 +187,12 @@ export function settler(
           headers = { 'Content-Type': 'text/html' },
         ] = args
 
-        res.writeHead?.(status, headers);
-        res.end?.(body);
+        if (!res.headersSent) {
+          res.writeHead?.(status, headers);
+        }
+        if (!res.writableEnded) {
+          res.end?.(body);
+        }
       }
 
       return resolve(...args)
@@ -193,8 +205,53 @@ export function settler(
           headers = { 'Content-Type': 'application/json' },
         ] = args
 
-        res.writeHead?.(status, headers);
-        res.end?.(body);
+        if (!res.headersSent) {
+          res.writeHead?.(status, headers);
+        }
+        if (!res.writableEnded) {
+          res.end?.(body);
+        }
+      }
+
+      return resolve(...args)
+    }
+    res.redirect = (...args) => {
+      let [
+        Location = '',
+        status = 301,
+      ] = args
+
+      console.log('redirecting to', { status, Location })
+
+      if (!isBrowser()) {
+        if (!res.headersSent) {
+          if (!Location.startsWith('http')) {
+            Location = [
+              'http',
+              (req?.socket?.encrypted ? 's' : ''),
+              '://',
+              req?.headers?.host,
+              prefixPath(Location),
+            ].join('')
+          }
+          let headers = { Location }
+
+          res.writeHead?.(status, headers);
+        }
+        if (!res.writableEnded) {
+          res.end?.();
+        }
+      } else {
+        if (!Location.startsWith('http')) {
+          Location = [
+            location?.protocol,
+            '//',
+            location?.host,
+            prefixPath(Location),
+          ].join('')
+        }
+
+        window.location.assign(Location)
       }
 
       return resolve(...args)
@@ -202,7 +259,23 @@ export function settler(
     res.resolve = resolve
     res.reject = reject
 
-    return callback?.call(
+    // console.log('settler callback', { url: req.url, callback })
+
+    if (
+      callback instanceof Promise
+    ) {
+      return await callback?.then(cb => {
+        // console.log('settler callback promise', { url: req.url, callback, cb })
+        return cb?.call?.(
+          this,
+          req,
+          res,
+          resolve,
+        )
+      })
+    }
+
+    return callback?.call?.(
       this,
       req,
       res,

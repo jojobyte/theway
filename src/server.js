@@ -40,7 +40,7 @@ export const serveStaticFiles = async (dir, options = {}) => {
     }
   }
 
-  return () => {}
+  return this
 }
 
 export function query(selector) {

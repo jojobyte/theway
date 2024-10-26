@@ -25,7 +25,8 @@ function Way(
   config = {},
 ) {
   let {
-    layout = null,
+    layout = '',
+    layouts = {},
     entrypoint = null,
     handleErrors = (req, res, next, ...args) => {
       let err404 = `404 Not Found`
@@ -33,8 +34,12 @@ function Way(
       console.error('routing error', req.url, err404, ...args)
 
       if (!isBrowser()) {
-        res.writeHead?.(404, { 'Content-Type': 'text/html' });
-        res.end?.(`<h1>${err404}</h1>`);
+        if (!res.headersSent) {
+          res.writeHead?.(404, { 'Content-Type': 'text/html' });
+        }
+        if (!res.writableEnded) {
+          res.end?.(`<h1>${err404}</h1>`);
+        }
         return;
       } else {
         if (config.entrypoint) {
@@ -49,6 +54,7 @@ function Way(
       return async (req, res, next) => !res?.finished && (res?.end?.(msg) || next())
     },
   } = config
+
   const RTE = routeRegex(base)
 
   let currentRoute, rerouteOff,
@@ -103,7 +109,7 @@ function Way(
         req.pattern = route.pattern
 
         if (
-          !param && !route.method && route.fns?.length > 0
+          route.isMiddleware && route.fns?.length > 0
         ) {
           let allSettled = await settled.call(this, route, req, res, next)
 
@@ -113,7 +119,9 @@ function Way(
         }
 
         if (
-          param && route.method === method
+          param && !route.isMiddleware && (
+            !route.method || route.method === method
+          )
         ) {
           for (p=0; p < route.keys.length;) {
             params[route.keys[p]] = param[++p] || null;
@@ -146,18 +154,13 @@ function Way(
 
   this.route = (req, res, next) => {
     let request = {}
-    if (typeof req === 'string') {
-      request = {
-        url: req,
-      }
-    } else {
-      request = {
-        ...req,
-      }
+
+    if (typeof req === 'object') {
+      request = req
     }
 
-    if (type !== ROUTER_TYPE.REQ) {
-      request.state = history.state
+    if (typeof req === 'string') {
+      request.url = req
     }
 
     if (this.reroute) {
@@ -183,6 +186,7 @@ function Way(
     ) {
       fns = [...args]
       pathRegex.fns = fns;
+      pathRegex.isMiddleware = true
       routes.push(pathRegex);
       return this;
     }
@@ -190,7 +194,6 @@ function Way(
       method = args.shift()
     }
 
-    method ??= 'GET'
     path = args.shift()
     fns = [...args]
 
@@ -222,6 +225,23 @@ function Way(
     return this
   }
 
+  /** @type {lit} */
+  this.useLayout = (...args) => {
+    let layoutArg = args.shift()
+
+    if (layoutArg) {
+      this.set('layout', layoutArg)
+    }
+
+    if (
+      typeof config.layouts[config.layout] === 'function'
+    ) {
+      return config.layouts[config.layout]?.apply(this, args)
+    }
+
+    return lit.apply(this, args)
+  }
+
   const rerouteUnsub = () => this.reroute.on(req => {
     history[
       req.url === currentRoute ? 'replaceState' : 'pushState'
@@ -231,6 +251,10 @@ function Way(
   })
 
   Object.defineProperties(this, {
+    routes: {
+      enumerable: true,
+      get() { return routes; },
+    },
     config: {
       enumerable: true,
       get() { return config; },
@@ -245,30 +269,18 @@ function Way(
         config.entrypoint = v
       },
     },
-    /** @type {lit} */
-    useLayout: {
-      get() {
-        return (...args) => {
-          if (
-            typeof config.layout === 'function'
-          ) {
-            return config.layout?.apply(this, args)
-          }
-
-          return lit.apply(this, args)
-        }
-      },
-    },
     listen: {
       get() {
         return (...args) => {
           if (type !== ROUTER_TYPE.REQ) {
-            addEventListener(type, this.navigate);
-            addEventListener('click', this.click);
+            addEventListener(type, this.navigate)
+            addEventListener('click', this.click)
             rerouteOff = rerouteUnsub()
           }
 
-          this.route(...args);
+          this.route(...args)
+
+          return this
         }
       },
     },
@@ -276,10 +288,12 @@ function Way(
       get() {
         return (...args) => {
           if (type !== ROUTER_TYPE.REQ) {
-            removeEventListener(type, this.navigate);
-            removeEventListener('click', this.click);
+            removeEventListener(type, this.navigate)
+            removeEventListener('click', this.click)
             rerouteOff?.()
           }
+
+          return this
         }
       },
     },
