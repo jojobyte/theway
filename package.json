@@ -1,6 +1,6 @@
 {
   "name": "theway",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A tiny (zero dependency) router for browsers & servers",
   "author": "jojobyte <184880+jojobyte@users.noreply.github.com> (https://jojo.io/)",
   "keywords": [
