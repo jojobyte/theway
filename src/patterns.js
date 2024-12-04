@@ -9,36 +9,44 @@ export const routeRegex = base => new RegExp(
 )
 
 export const patternToRegex = (path, loose) => {
-  let keys = [],
-      regex = [
-        ...path.matchAll(pathRegex)
-      ].map(c => {
-        let [
-          key,
-          val
-        ] = Object.entries(c.groups).find(e => e[1]),
-            e = val.indexOf('.', 1),
-            patterns = {
-              dir: v => '/' + v,
-              param: v => '/([^/]+?)' + (
-                !!~e ? '\\' + v.substring(e) : ''
-              ),
-              wild: () => '(?:/([^/].*))?' + (
-                !!~e ? '?\\' + v.substring(e) : ''
-              ),
-              opt: v => '(?:/([^/]+?))?' + (
-                !!~e ? '?\\' + v.substring(e) : ''
-              ),
-            }
+  let keys = []
+  let pathPattern = [
+      ...path.matchAll(pathRegex)
+    ].map(c => {
+      let [ key, val ] = Object.entries(c.groups).find(e => e[1])
+      let e = val.indexOf('.', 1)
+      let patterns = {
+        dir: v => '/' + v,
+        param: v => '/([^/]+?)' + (
+          !!~e ? '\\' + v.substring(e) : ''
+        ),
+        wild: () => '(?:/([^/].*))?' + (
+          !!~e ? '?\\' + v.substring(e) : ''
+        ),
+        opt: v => '(?:/([^/]+?))?' + (
+          !!~e ? '?\\' + v.substring(e) : ''
+        ),
+      }
 
-        if (key !== 'dir') {
-          keys.push(val);
-        }
+      if (key !== 'dir') {
+        keys.push(val);
+      }
 
-        return patterns[key](val)
-      }).join('')
+      return patterns[key](val)
+    }).join('')
 
-  regex = new RegExp(`^${regex || '/'}${loose ? '(?=$|\/)' : '\/?$'}`, 'i')
+  let pattern = `^${pathPattern || '/'}${loose ? '(?=$|\/)' : '\/?$'}`
 
-  return { keys, regex };
+  let regex = new RegExp(
+    pattern,
+    'i'
+  )
+
+  return {
+    keys,
+    regex,
+    path,
+    pathPattern,
+    pattern,
+  }
 }

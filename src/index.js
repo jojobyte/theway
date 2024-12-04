@@ -106,7 +106,7 @@ function Way(
         param = route.regex?.exec?.(url)
 
         req.route = route
-        req.pattern = route.pattern
+        req.pattern = route.path
 
         if (
           route.isMiddleware && route.fns?.length > 0
@@ -197,10 +197,11 @@ function Way(
     path = args.shift()
     fns = [...args]
 
-    pathRegex = patternToRegex(path)
-    pathRegex.fns = fns;
-    pathRegex.method = method;
-    pathRegex.pattern = path;
+    pathRegex = {
+      ...patternToRegex(path),
+      fns,
+      method,
+    }
 
     routes.push(pathRegex);
     return this;
